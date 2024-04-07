@@ -1,0 +1,6 @@
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Allocated port 3 for remote forward to localhost:5432
+You are not authenticated.
+Your tunnel will expire in 60 minutes. Upgrade to Pinggy Pro to get unrestricted tunnels. https://dashboard.pinggy.io
+tcp://rnlha-71-163-133-236.a.free.pinggy.online:46085
+tcp://rnlha-71-163-133-236.a.free.pinggy.link:46085

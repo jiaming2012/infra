@@ -4,6 +4,7 @@ metadata:
   name: postgres
   namespace: data
 spec:
+  type: ClusterIP
   ports:
     - name: postgres
       port: 5432
