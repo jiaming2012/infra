@@ -4,14 +4,18 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
+	"os"
 
 	"github.com/EventStore/EventStore-Client-Go/esdb"
 )
 
 func main() {
-	url := "esdb://us.loclx.io:21133?tls=false&keepAliveTimeout=10000&keepAliveInterval=10000"
+	esdbURL := os.Getenv("ESDB_URL")
 
-	settings, err := esdb.ParseConnectionString(url)
+	log.Printf("Connecting to EventStoreDB at %s\n", esdbURL)
+
+	settings, err := esdb.ParseConnectionString(esdbURL)
 	if err != nil {
 		panic(err)
 	}

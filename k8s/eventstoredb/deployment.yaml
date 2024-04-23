@@ -27,6 +27,9 @@ spec:
         volumeMounts:
         - name: eventstoredb-data
           mountPath: /var/lib/eventstore
+        - name: eventstoredb-config
+          mountPath: /etc/eventstore
+        args: ["--config=/etc/eventstore/eventstoredb.conf"]
       volumes:
       - name: eventstoredb-data
         persistentVolumeClaim:
