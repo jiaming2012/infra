@@ -1,14 +1,81 @@
 
-## Check loclx 
+## Start loclx 
+### Method 1: automatically (recommended)
+Check if the loclx dashboard is already running via a systemd service file
+
+``` bash
+sudo systemctl status loclx.service
+```
+
+#### Install systemd service (if not already present)
+``` bash
+sudo nano /etc/systemd/system/loclx.service
+```
+
+Paste the following file
+```
+[Unit]
+Description=LocalXpose Service
+After=network.target
+
+[Service]
+ExecStart=/snap/bin/loclx
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+``` bash
+sudo systemctl daemon-reload               
+sudo systemctl enable loclx.service
+sudo systemctl status loclx.service
+```
+
+### Method 2: manually
 In a terminal:
 ``` bash
 /snap/bin/loclx
 ```
 
-### Start a new terminal
-Currently, whenever the computer is restarted, a new tunnel needs to be created. It can be created via the GUI. In the future, I think this can be automated via command line.
-
 ### Setup tunnel on loclx
+We currently use a paid service, loclx, to expose our db services to the outside world.
+
+#### Method 1: automatically (recommended)
+Check if the tcp tunnels service is running 
+
+``` bash
+sudo systemctl status loclx-tunnels.service
+```
+
+#### Install systemd service (if not already present)
+``` bash
+sudo nano /etc/systemd/system/loclx-tunnels.service
+```
+
+Paste the following file
+```                                                  
+[Unit]
+Description=LocalXpose Service
+After=network-online.target
+
+[Service]
+User=jamal
+ExecStart=/snap/bin/loclx tunnel config -f /home/jamal/projects/infra/loclx/config.yaml
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
+```
+
+``` bash
+sudo systemctl daemon-reload               
+sudo systemctl enable loclx-tunnels.service
+sudo systemctl status loclx-tunnels.service
+```
+
+#### Method 2: manually
 Go to dashboard and set up two tunnels for eventstoreDB and postgreSQL.
 
 #### EventstoreDB
