@@ -1,0 +1,11 @@
+eventstoredb:
+  type: tcp
+  to: localhost:2113
+  region: us
+  reserved_endpoint: us.loclx.io:21133
+
+postgres:
+  type: tcp
+  to: localhost:5432
+  region: us
+  reserved_endpoint: us.loclx.io:54329

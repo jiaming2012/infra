@@ -22,9 +22,29 @@ kubectl apply -f k8s/postgres/secret.yaml --namespace data
 kubectl apply -f k8s/postgres/config.yaml --namespace data
 ```
 
-## Setup ingress controller to receive web traffic
+## Setup ingress controller for receiving web traffic
 If using microk8s:
 ``` bash
 microk8s enable dns
+microk8s enable ingress
 ```
 
+Install the ingress resource
+``` bash
+k apply -f k8s/ingress/nginx-ingress-microk8s-tcp-controller.yaml
+```
+
+https://stackoverflow.com/questions/29142/getting-ssh-to-execute-a-command-in-the-background-on-target-machine
+
+Start the program
+``` bash
+./run.sh   
+```
+
+## Pinggy
+Pinggy is used to expose our database to the world.
+
+```bash
+cd path/to/infra
+./start-infra.sh
+```
