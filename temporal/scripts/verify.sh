@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Temporal Stack — Post-Startup Smoke Test
+# Temporal Stack — Post-Startup Smoke Test (incl. observability)
 # =============================================================================
 # Run this script after `docker compose up -d` to verify the stack is healthy.
 # Usage:  cd infra/temporal && bash scripts/verify.sh
@@ -103,6 +103,43 @@ for ns in yumyums slack-trading; do
     check_fail "Namespace '${ns}' not found — run: bash scripts/create-namespaces.sh"
   fi
 done
+
+# ---------------------------------------------------------------------------
+# Check 7: Temporal Prometheus metrics endpoint
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Check 7: Temporal metrics endpoint ---"
+# Use docker compose exec to curl from inside the container network (port 8000 is not published to host)
+METRICS_COUNT=$(docker compose exec -T temporal sh -c 'wget -q -O - http://localhost:8000/metrics 2>/dev/null | grep -c "^temporal_"' 2>/dev/null || echo "0")
+if [ "${METRICS_COUNT}" -gt 0 ]; then
+  check_pass "Temporal metrics endpoint returned ${METRICS_COUNT} temporal_ metrics"
+else
+  check_fail "Temporal metrics endpoint not responding — verify PROMETHEUS_ENDPOINT=0.0.0.0:8000 in compose"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 8: Prometheus scraping Temporal metrics
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Check 8: Prometheus scrape status ---"
+PROM_TARGETS=$(curl -s "http://localhost:9090/api/v1/targets" 2>/dev/null || echo "")
+if echo "${PROM_TARGETS}" | grep -q '"health":"up"'; then
+  check_pass "Prometheus is scraping Temporal metrics (target health: up)"
+else
+  check_fail "Prometheus target not healthy — check http://localhost:9090/targets for details"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 9: Grafana health
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Check 9: Grafana health ---"
+GRAFANA_HEALTH=$(curl -s "http://localhost:3000/api/health" 2>/dev/null || echo "")
+if echo "${GRAFANA_HEALTH}" | grep -q '"database":"ok"'; then
+  check_pass "Grafana is healthy at http://localhost:3000"
+else
+  check_fail "Grafana health check failed — check grafana container logs"
+fi
 
 # ---------------------------------------------------------------------------
 # Summary
