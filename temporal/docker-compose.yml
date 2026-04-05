@@ -32,7 +32,7 @@ services:
   # Requires POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD in .env
   # ---------------------------------------------------------------------------
   temporal:
-    image: temporalio/auto-setup:1.30.3
+    image: temporalio/auto-setup:1.29.5
     <<: *restart-policy
     container_name: temporal
     environment:
@@ -100,7 +100,7 @@ services:
   #   docker compose exec temporal-admin-tools temporal operator namespace list
   # ---------------------------------------------------------------------------
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.30.3
+    image: temporalio/admin-tools:1.29.5-tctl-v1.18.4-cli-v1.6.1
     container_name: temporal-admin-tools
     environment:
       - TEMPORAL_ADDRESS=temporal:7233

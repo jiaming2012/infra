@@ -36,8 +36,8 @@ echo ""
 # Check 1: All containers are running
 # ---------------------------------------------------------------------------
 echo "--- Check 1: Container status ---"
-COMPOSE_PS=$(docker compose ps --format json 2>/dev/null || docker compose ps 2>/dev/null)
-if docker compose ps | grep -qE "(temporal\s|temporal-ui|temporal-admin-tools)"; then
+COMPOSE_PS=$(docker compose ps 2>/dev/null || true)
+if echo "${COMPOSE_PS}" | grep -qE "(temporal[[:space:]]|temporal-ui|temporal-admin-tools)"; then
   check_pass "Containers listed in docker compose ps"
 else
   check_fail "Containers not found in docker compose ps — is the stack running?"
@@ -71,7 +71,8 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Check 4: Namespace access ---"
-if docker compose exec temporal temporal operator namespace list 2>/dev/null | grep -q "default\|Namespace"; then
+NAMESPACE_LIST=$(docker compose exec -T temporal temporal operator namespace list 2>/dev/null || true)
+if echo "${NAMESPACE_LIST}" | grep -q "default\|Namespace"; then
   check_pass "Namespace list returned successfully (at least 'default' namespace visible)"
 else
   check_fail "Namespace list failed — Temporal server may not be fully ready"
