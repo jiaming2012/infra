@@ -91,6 +91,20 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Check 6: Project namespaces exist (yumyums, slack-trading)
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Check 6: Project namespaces ---"
+for ns in yumyums slack-trading; do
+  if docker compose exec -T temporal-admin-tools \
+       temporal operator namespace describe --namespace "${ns}" > /dev/null 2>&1; then
+    check_pass "Namespace '${ns}' exists"
+  else
+    check_fail "Namespace '${ns}' not found — run: bash scripts/create-namespaces.sh"
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
