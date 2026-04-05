@@ -1,0 +1,112 @@
+# =============================================================================
+# Temporal Stack — Docker Compose
+# =============================================================================
+# Services: Temporal server (auto-setup), Web UI, Admin Tools
+# Persistence: External PostgreSQL (Metabase's Postgres on WSL host)
+# Network: Isolated bridge network — temporal-net
+# =============================================================================
+# NOTE: No 'version:' key — deprecated in Compose Spec (modern Docker Compose
+#       ignores it; omitting follows current best practice)
+# =============================================================================
+
+x-restart: &restart-policy
+  restart: always
+
+networks:
+  temporal-net:
+    driver: bridge
+
+volumes:
+  temporal-data:
+    driver: local
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Temporal Server (auto-setup)
+  # Handles schema init for both 'temporal' and 'temporal_visibility' databases
+  # on first run, then starts all four internal services (Frontend, History,
+  # Matching, Worker) in a single container.
+  #
+  # Connects to EXTERNAL Postgres on the WSL host via host-gateway.
+  # Requires POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD in .env
+  # ---------------------------------------------------------------------------
+  temporal:
+    image: temporalio/auto-setup:1.30.3
+    <<: *restart-policy
+    container_name: temporal
+    environment:
+      # Use postgres12 driver (NOT 'postgres' — retired in Temporal v1.24)
+      - DB=postgres12
+      - DB_PORT=${POSTGRES_PORT:-5432}
+      # POSTGRES_SEEDS = hostname/IP reachable from inside the container
+      # Set POSTGRES_HOST=host-gateway in .env (see .env.example)
+      - POSTGRES_SEEDS=${POSTGRES_HOST:?Set POSTGRES_HOST in .env}
+      - POSTGRES_USER=${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      - DBNAME=temporal
+      - VISIBILITY_DBNAME=temporal_visibility
+      # Bind gRPC on all interfaces so remote workers can connect
+      - BIND_ON_IP=0.0.0.0
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    volumes:
+      # Mount dynamic config directory (required — server fails without it)
+      - ./config/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    ports:
+      # gRPC port — 0.0.0.0 allows workers from outside the WSL box to connect
+      - "0.0.0.0:7233:7233"
+    extra_hosts:
+      # host-gateway resolves to the Docker host's bridge IP (Docker 20.10+)
+      # Allows using POSTGRES_HOST=host-gateway in .env for WSL host Postgres
+      - "host-gateway:host-gateway"
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "localhost:7233", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - temporal-net
+
+  # ---------------------------------------------------------------------------
+  # Temporal Web UI
+  # Accessible from Windows browser via Docker Desktop port forwarding.
+  # IMPORTANT: Must bind on 0.0.0.0 (not 127.0.0.1) — Docker Desktop only
+  # forwards 0.0.0.0-bound ports from WSL2 to the Windows localhost.
+  # URL: http://localhost:8233
+  # ---------------------------------------------------------------------------
+  temporal-ui:
+    image: temporalio/ui:2.48.1
+    <<: *restart-policy
+    container_name: temporal-ui
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8233
+      - TEMPORAL_PERMIT_WRITE_API=true
+    ports:
+      # 0.0.0.0 required for Docker Desktop to forward to Windows browser
+      - "0.0.0.0:8233:8080"
+    depends_on:
+      temporal:
+        condition: service_healthy
+    networks:
+      - temporal-net
+
+  # ---------------------------------------------------------------------------
+  # Temporal Admin Tools
+  # Provides the 'temporal' CLI for namespace management and one-off operations.
+  # Not always-on — no restart policy. Access via:
+  #   docker compose run --rm temporal-admin-tools temporal <command>
+  #   docker compose exec temporal-admin-tools temporal operator namespace list
+  # ---------------------------------------------------------------------------
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.30.3
+    container_name: temporal-admin-tools
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    entrypoint: ["tail", "-f", "/dev/null"]
+    depends_on:
+      temporal:
+        condition: service_healthy
+    networks:
+      - temporal-net

@@ -1,0 +1,6 @@
+# Temporal dynamic configuration for SQL-based visibility
+# This file is required by auto-setup — do not delete.
+# The server polls this file at runtime; changes take effect without restart.
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}
