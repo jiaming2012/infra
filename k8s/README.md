@@ -22,19 +22,9 @@ kubectl apply -f k8s/postgres/secret.yaml --namespace data
 kubectl apply -f k8s/postgres/config.yaml --namespace data
 ```
 
-## Setup ngrok as ingress controller for receiving web traffic
+## Setup ingress controller to receive web traffic
 If using microk8s:
 ``` bash
 microk8s enable dns
 ```
 
-Link to download ngrok cmd client: https://ngrok.com/download
-Link to install kubernetes ingress controller: https://ngrok.com/docs/using-ngrok-with/k8s/. Note: use helm3
-``` bash
-microk8s helm3 repo update
-```
-
-As mentioned in the tutorial, apply the ngrok-manifest file with:
-``` bash
-kubectl apply -f ngrok-manifest.yaml
-```
