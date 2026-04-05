@@ -48,6 +48,9 @@ services:
       - VISIBILITY_DBNAME=temporal_visibility
       # Bind gRPC on all interfaces so remote workers can connect
       - BIND_ON_IP=0.0.0.0
+      # Advertised address for worker task-routing RPCs (must be the host LAN IP,
+      # not 0.0.0.0 or a container IP — see Phase 2 research, Pitfall 1)
+      - TEMPORAL_BROADCAST_ADDRESS=${TEMPORAL_BROADCAST_ADDRESS:-192.168.8.164}
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
     volumes:
       # Mount dynamic config directory (required — server fails without it)
