@@ -19,6 +19,10 @@ networks:
 volumes:
   temporal-data:
     driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
 
 services:
 
@@ -52,6 +56,10 @@ services:
       # not 0.0.0.0 or a container IP — see Phase 2 research, Pitfall 1)
       - TEMPORAL_BROADCAST_ADDRESS=${TEMPORAL_BROADCAST_ADDRESS:-192.168.8.164}
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      # Prometheus metrics endpoint — enables /metrics on port 8000 inside the container.
+      # Prometheus scrapes this via Docker DNS (temporal:8000). Port 8000 is NOT published
+      # to the host — only accessible within temporal-net.
+      - PROMETHEUS_ENDPOINT=0.0.0.0:8000
     volumes:
       # Mount dynamic config directory (required — server fails without it)
       - ./config/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
@@ -111,5 +119,67 @@ services:
     depends_on:
       temporal:
         condition: service_healthy
+    networks:
+      - temporal-net
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — Metrics Scraping
+  # Scrapes Temporal /metrics endpoint at temporal:8000 on temporal-net.
+  # Data persisted in prometheus-data volume with 15-day retention.
+  # UI: http://localhost:9090
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.53.5
+    <<: *restart-policy
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "0.0.0.0:9090:9090"
+    depends_on:
+      temporal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - temporal-net
+
+  # ---------------------------------------------------------------------------
+  # Grafana — Metrics Dashboards
+  # Pre-provisioned with Prometheus datasource and Temporal server dashboard.
+  # Login: admin / (GRAFANA_ADMIN_PASSWORD from .env, default: admin)
+  # UI: http://localhost:3000
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana-oss:12.4.2
+    <<: *restart-policy
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./config/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./config/grafana/provisioning/dashboards/json:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "0.0.0.0:3000:3000"
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - temporal-net
