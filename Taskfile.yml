@@ -1,50 +1,47 @@
 version: '3'
 
 vars:
-  COMPOSE_DIR: ./docker
+  TRADING_COMPOSE: ./docker/docker-compose.yml
+  YUMYUMS_COMPOSE: ./docker/yumyums/docker-compose.yml
 
 tasks:
   up:
-    desc: Start all services
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml up -d
+    desc: Start all services (trading + yumyums)
+    cmds:
+      - docker compose -f {{.TRADING_COMPOSE}} up -d
+      - docker compose -f {{.YUMYUMS_COMPOSE}} up -d
 
   down:
     desc: Stop all services (data persists)
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml down
-
-  down:wipe:
-    desc: Stop all services and remove volumes (destroys data)
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml down -v
+    cmds:
+      - docker compose -f {{.TRADING_COMPOSE}} down
+      - docker compose -f {{.YUMYUMS_COMPOSE}} down
 
   ps:
     desc: Show running services
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml ps
-
-  logs:
-    desc: Tail logs for all services
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml logs -f
+    cmds:
+      - docker compose -f {{.TRADING_COMPOSE}} ps
+      - docker compose -f {{.YUMYUMS_COMPOSE}} ps
 
   # ---------------------------------------------------------------------------
   # Yumyums
   # ---------------------------------------------------------------------------
   yumyums:up:
-    desc: Start yumyums Postgres only
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml up -d yumyums-postgres
+    desc: Start yumyums Postgres
+    cmd: docker compose -f {{.YUMYUMS_COMPOSE}} up -d
 
   yumyums:down:
     desc: Stop yumyums Postgres
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml stop yumyums-postgres
+    cmd: docker compose -f {{.YUMYUMS_COMPOSE}} down
 
   yumyums:logs:
     desc: Tail yumyums Postgres logs
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml logs -f yumyums-postgres
+    cmd: docker compose -f {{.YUMYUMS_COMPOSE}} logs -f
 
   yumyums:reset:
     desc: Wipe yumyums data and restart
     cmds:
-      - docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml stop yumyums-postgres
-      - docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml rm -f yumyums-postgres
-      - docker volume rm docker_yumyums-pgdata 2>/dev/null || true
+      - docker compose -f {{.YUMYUMS_COMPOSE}} down -v
       - task: yumyums:up
 
   # ---------------------------------------------------------------------------
@@ -52,12 +49,12 @@ tasks:
   # ---------------------------------------------------------------------------
   trading:up:
     desc: Start trading stack (postgres, eventstore, server, bots)
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml up -d postgres eventstoredb trading-server bot-1 bot-2
+    cmd: docker compose -f {{.TRADING_COMPOSE}} up -d
 
   trading:down:
     desc: Stop trading stack
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml stop postgres eventstoredb trading-server bot-1 bot-2
+    cmd: docker compose -f {{.TRADING_COMPOSE}} down
 
   trading:logs:
     desc: Tail trading stack logs
-    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml logs -f postgres eventstoredb trading-server bot-1 bot-2
+    cmd: docker compose -f {{.TRADING_COMPOSE}} logs -f

@@ -43,31 +43,6 @@ services:
       - trading-net
 
   # ---------------------------------------------------------------------------
-  # Yumyums HQ — Dev PostgreSQL
-  # ---------------------------------------------------------------------------
-  # Accessible from LAN/Tailscale for remote dev. Port 5433 avoids conflict
-  # with the trading Postgres above. hq_test database auto-created on first start.
-  # ---------------------------------------------------------------------------
-  yumyums-postgres:
-    image: postgres:16
-    <<: *restart-policy
-    container_name: yumyums-dev-pg
-    environment:
-      POSTGRES_USER: yumyums
-      POSTGRES_PASSWORD: yumyums
-      POSTGRES_DB: yumyums
-    volumes:
-      - yumyums-pgdata:/var/lib/postgresql/data
-      - ./yumyums/init-test-db.sql:/docker-entrypoint-initdb.d/01-test-db.sql:ro
-    ports:
-      - "0.0.0.0:5433:5432"    # Exposed to LAN/Tailscale for remote dev
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U yumyums"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ---------------------------------------------------------------------------
   # EventStoreDB 24.x (event sourcing)
   # ---------------------------------------------------------------------------
   eventstoredb:
@@ -166,8 +141,6 @@ services:
 
 volumes:
   pgdata:
-    driver: local
-  yumyums-pgdata:
     driver: local
   esdb-data:
     driver: local

@@ -1,0 +1,30 @@
+# Yumyums HQ — Dev PostgreSQL
+#
+# Port 5433 to avoid conflict with trading Postgres on 5432.
+# hq_test database auto-created on first start.
+#
+# Copy .env.example to .env and set POSTGRES_PASSWORD before first run.
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    container_name: yumyums-dev-pg
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-yumyums}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-yumyums}
+    volumes:
+      - yumyums-pgdata:/var/lib/postgresql/data
+      - ./init-test-db.sql:/docker-entrypoint-initdb.d/01-test-db.sql:ro
+    ports:
+      - "0.0.0.0:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yumyums"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  yumyums-pgdata:
