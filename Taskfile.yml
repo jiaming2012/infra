@@ -1,0 +1,63 @@
+version: '3'
+
+vars:
+  COMPOSE_DIR: ./docker
+
+tasks:
+  up:
+    desc: Start all services
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml up -d
+
+  down:
+    desc: Stop all services (data persists)
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml down
+
+  down:wipe:
+    desc: Stop all services and remove volumes (destroys data)
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml down -v
+
+  ps:
+    desc: Show running services
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml ps
+
+  logs:
+    desc: Tail logs for all services
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml logs -f
+
+  # ---------------------------------------------------------------------------
+  # Yumyums
+  # ---------------------------------------------------------------------------
+  yumyums:up:
+    desc: Start yumyums Postgres only
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml up -d yumyums-postgres
+
+  yumyums:down:
+    desc: Stop yumyums Postgres
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml stop yumyums-postgres
+
+  yumyums:logs:
+    desc: Tail yumyums Postgres logs
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml logs -f yumyums-postgres
+
+  yumyums:reset:
+    desc: Wipe yumyums data and restart
+    cmds:
+      - docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml stop yumyums-postgres
+      - docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml rm -f yumyums-postgres
+      - docker volume rm docker_yumyums-pgdata 2>/dev/null || true
+      - task: yumyums:up
+
+  # ---------------------------------------------------------------------------
+  # Trading
+  # ---------------------------------------------------------------------------
+  trading:up:
+    desc: Start trading stack (postgres, eventstore, server, bots)
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml up -d postgres eventstoredb trading-server bot-1 bot-2
+
+  trading:down:
+    desc: Stop trading stack
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml stop postgres eventstoredb trading-server bot-1 bot-2
+
+  trading:logs:
+    desc: Tail trading stack logs
+    cmd: docker compose -f {{.COMPOSE_DIR}}/docker-compose.yml logs -f postgres eventstoredb trading-server bot-1 bot-2
