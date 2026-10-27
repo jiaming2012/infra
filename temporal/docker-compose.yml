@@ -39,6 +39,15 @@ services:
     image: temporalio/auto-setup:1.29.5
     <<: *restart-policy
     container_name: temporal
+    # Advertise the container's own IP on the membership ring unless .env pins one.
+    # The broadcast address is how frontend/history/matching find EACH OTHER — workers
+    # never see it (they dial the published :7233). A host LAN IP baked in here breaks
+    # the server the moment the host changes networks: ringpop cannot join its own
+    # advertised address, start-up times out, and `restart: always` loops forever.
+    entrypoint:
+      - sh
+      - -c
+      - export TEMPORAL_BROADCAST_ADDRESS="$${TEMPORAL_BROADCAST_ADDRESS:-$$(hostname -i)}"; exec /etc/temporal/entrypoint.sh autosetup
     environment:
       # Use postgres12 driver (NOT 'postgres' — retired in Temporal v1.24)
       - DB=postgres12
@@ -52,9 +61,9 @@ services:
       - VISIBILITY_DBNAME=temporal_visibility
       # Bind gRPC on all interfaces so remote workers can connect
       - BIND_ON_IP=0.0.0.0
-      # Advertised address for worker task-routing RPCs (must be the host LAN IP,
-      # not 0.0.0.0 or a container IP — see Phase 2 research, Pitfall 1)
-      - TEMPORAL_BROADCAST_ADDRESS=${TEMPORAL_BROADCAST_ADDRESS:-192.168.8.164}
+      # Membership-ring address. Empty/unset → the container's own IP (entrypoint above).
+      # Set it in .env only to pin a specific address.
+      - TEMPORAL_BROADCAST_ADDRESS=${TEMPORAL_BROADCAST_ADDRESS:-}
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       # Prometheus metrics endpoint — enables /metrics on port 8000 inside the container.
       # Prometheus scrapes this via Docker DNS (temporal:8000). Port 8000 is NOT published
